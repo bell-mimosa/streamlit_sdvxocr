@@ -74,8 +74,6 @@ PROMPT_TEXT = """
 }
 """
 
-# --- メイン処理 ---
-# 複数ファイルのアップローダー
 uploaded_files = st.file_uploader(
     "リザルト画像をアップロードしてください（複数選択可）",
     type=["jpg", "jpeg", "png"],
@@ -94,17 +92,14 @@ if uploaded_files:
                 try:
                     image = Image.open(uploaded_file)
 
-                    # Geminiモデルの初期化とリクエスト
                     model = genai.GenerativeModel('gemini-1.5-flash')
                     response = model.generate_content([PROMPT_TEXT, image])
                     
-                    # レスポンスをJSONとしてパース
                     # response.text 内の ```json ... ``` などを取り除く
                     clean_response = response.text.strip().replace("```json", "").replace("```", "").strip()
                     st.info(f"Geminiからの生データ for {uploaded_file.name}: {response.text}")
                     data = json.loads(clean_response)
                     
-                    # ファイル名を追加
                     data['filename'] = uploaded_file.name
                     extracted_data.append(data)
 
@@ -114,24 +109,20 @@ if uploaded_files:
                 except Exception as e:
                     st.error(f"**{uploaded_file.name}**: 処理中にエラーが発生しました: {e}")
 
-                # プログレスバーの更新
                 progress_bar.progress((i + 1) / len(uploaded_files), text=f"処理中: {uploaded_file.name}")
 
-        progress_bar.empty() # プログレスバーを消す
+        progress_bar.empty()
 
         if extracted_data:
-            # 抽出したデータをPandas DataFrameに変換
             df = pd.DataFrame(extracted_data)
             
-            # 列の順序を整える
             column_order = [
                 'filename', 'title', 'artist', 'difficulty_name', 'level', 
                 'score', 'ex_score', 'rate_name', 'rate_percentage', 'clear_type'
             ]
             # 存在しない列は無視する
             df = df.reindex(columns=[col for col in column_order if col in df.columns])
-            
-            # 結果をセッション状態に保存
+
             st.session_state.results = df
             st.success(f"✅ {len(extracted_data)} / {len(uploaded_files)} 件の画像の処理が完了しました。")
         else:
